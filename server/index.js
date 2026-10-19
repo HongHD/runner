@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const { sequelize, connectDB } = require('./config/database');
 const initSocket = require('./socket');
 const authRoutes = require('./routes/auth.routes');
@@ -12,6 +12,7 @@ const gameTypeRoutes = require('./routes/game-type.routes');
 const uploadRoutes = require('./routes/upload.routes');
 require('./models'); // 모든 모델 로드 및 관계 설정 (sync 전에 반드시 필요)
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +32,17 @@ app.use('/api/upload', uploadRoutes);
 
 // 정적 파일 제공 (업로드된 이미지/파일 등)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// [배포용] 빌드된 화면(client/dist)을 같은 서버에서 제공 -> 주소/포트가 하나라서 Cloudtype에 올리기 쉬움
+const clientDist = path.join(__dirname, '../client/dist');
+if (fs.existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    // API/업로드/소켓이 아닌 모든 GET 요청은 React 화면(index.html)으로 연결
+    app.use((req, res, next) => {
+        if (req.method !== 'GET' || /^\/(api|uploads|socket\.io)(\/|$)/.test(req.path)) return next();
+        res.sendFile(path.join(clientDist, 'index.html'));
+    });
+}
 
 // Socket.io 초기화
 const io = new Server(server, {
