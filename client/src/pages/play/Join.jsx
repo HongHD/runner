@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import useGameStore from '../../store/gameStore';
 
 export default function PlayerJoin() {
-    const [pinCodeInput, setPinCodeInput] = useState('');
+    // QR 코드로 접속한 경우 URL의 ?pin= 값을 사용 → PIN 입력 생략
+    const [searchParams] = useSearchParams();
+    const qrPin = (searchParams.get('pin') || '').replace(/[^0-9]/g, '').slice(0, 6);
+    const isQrJoin = qrPin.length === 6;
+    const [pinCodeInput, setPinCodeInput] = useState(qrPin);
     const [nicknameInput, setNicknameInput] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -16,7 +20,7 @@ export default function PlayerJoin() {
             return setError('PIN 6자리를 올바르게 입력해주세요.');
         }
         if (!nicknameInput.trim()) {
-            return setError('닉네임을 입력해주세요.');
+            return setError(isQrJoin ? 'ID를 입력해주세요.' : '닉네임을 입력해주세요.');
         }
 
         // 통신 소켓 연결 시작
@@ -67,7 +71,9 @@ export default function PlayerJoin() {
                         <span className="text-4xl font-black text-white">RVD</span>
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-white">참여자 입장</h1>
-                    <p className="text-slate-400 font-medium">관리자의 안내에 따라 PIN과 닉네임을 입력하세요</p>
+                    <p className="text-slate-400 font-medium">
+                        {isQrJoin ? 'ID를 입력하고 접속 버튼을 눌러주세요' : '관리자의 안내에 따라 PIN과 닉네임을 입력하세요'}
+                    </p>
                 </div>
 
                 {/* Form Area */}
@@ -79,6 +85,11 @@ export default function PlayerJoin() {
                     )}
 
                     <div className="space-y-5">
+                        {isQrJoin ? (
+                            <div className="text-center text-sm text-slate-400">
+                                게임 PIN <span className="ml-2 text-xl font-bold text-white tracking-[0.2em]">{pinCodeInput}</span>
+                            </div>
+                        ) : (
                         <div className="space-y-2">
                             <label className="block text-sm font-semibold text-slate-300 ml-1">게임 PIN</label>
                             <input
@@ -90,16 +101,18 @@ export default function PlayerJoin() {
                                 placeholder="000000"
                             />
                         </div>
+                        )}
 
                         <div className="space-y-2">
-                            <label className="block text-sm font-semibold text-slate-300 ml-1">닉네임</label>
+                            <label className="block text-sm font-semibold text-slate-300 ml-1">{isQrJoin ? 'ID' : '닉네임'}</label>
                             <input
                                 type="text"
                                 maxLength={12}
                                 value={nicknameInput}
                                 onChange={e => setNicknameInput(e.target.value)}
                                 className="w-full bg-slate-900/50 text-white text-center text-xl font-bold py-4 rounded-2xl border border-slate-700 outline-none focus:border-blue-500 focus:ring-1 ring-blue-500 transition-all placeholder:text-slate-600"
-                                placeholder="닉네임 입력"
+                                placeholder={isQrJoin ? 'ID 입력' : '닉네임 입력'}
+                                autoFocus={isQrJoin}
                             />
                         </div>
                     </div>
@@ -108,7 +121,7 @@ export default function PlayerJoin() {
                         type="submit"
                         className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-lg font-bold py-5 rounded-2xl shadow-lg transition-colors"
                     >
-                        입장하기
+                        {isQrJoin ? '접속' : '입장하기'}
                     </button>
                 </form>
             </div>

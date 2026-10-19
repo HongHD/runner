@@ -30,6 +30,19 @@ app.use('/api/games', gameRoutes);
 app.use('/api/game-types', gameTypeRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// 내 PC의 내부 네트워크 IP 조회 (관리자가 localhost로 접속했을 때 참여 QR 코드 주소 생성용)
+app.get('/api/network-ip', (req, res) => {
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                return res.json({ ip: net.address });
+            }
+        }
+    }
+    res.json({ ip: null });
+});
+
 // 정적 파일 제공 (업로드된 이미지/파일 등)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
